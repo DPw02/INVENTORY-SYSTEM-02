@@ -6,6 +6,12 @@
 <title>Inventory Management System – INVENTORY02 (Final)</title>
 <style>
 
+.materials-scroll{
+  max-height:70vh;
+  overflow-y:auto;
+}
+
+
 .dashboard-grid{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
@@ -42,7 +48,15 @@
     --bg:#093851; --card:#153a4e; --muted:#0cf0ff; --accent:#2d607c; --danger:#aa3333; --panel:#07456552;
     --text:#0cf0ff; --light:#0cf0ff;
   }
-  html,body{height:100%; margin:0; font-family:Inter, Arial, sans-serif; background:var(--bg); color:var(--text); overflow:hidden;}
+  html,body{
+  height:100%;
+  margin:0;
+  font-family:Inter, Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  overflow:auto;
+}
+
   .dark { background:#061121; color:var(--muted); }
 
 /* FIX edit modal unit dropdown */
@@ -89,7 +103,17 @@
 
   /* MODALS */
   .modal-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); justify-content:center; align-items:center; z-index:90000}
-  .modalContent{background:var(--card); padding:20px; width:420px; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,0.4)}
+  .modalContent{
+  background:var(--card);
+  padding:20px;
+  width:420px;
+  border-radius:10px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.4);
+
+  max-height:85vh;        /* ✅ LIMIT HEIGHT */
+  overflow-y:auto;        /* ✅ ENABLE SCROLL */
+}
+
   .modalContent h3{margin-top:0; color:var(--light)}
   .modalContent input{
   width:100%;
@@ -127,10 +151,14 @@
   .hidden{display:none}
 
   @media(max-width:900px){
-    #sidebar{display:none !important}
-    #main{margin-left:0; padding:16px}
-    .modalContent{width:92%}
+  #sidebar{display:none !important}
+  #main{margin-left:0; padding:16px}
+  .modalContent{
+    width:92%;
+    max-height:85vh;   /* ✅ ENSURE SCROLL ON MOBILE */
+    overflow-y:auto;
   }
+}
 
   /* small status */
   #statusBar{position:fixed;right:12px;bottom:12px;background:rgba(0,0,0,0.45);color:#a7c5ff;padding:8px 12px;border-radius:8px;font-size:13px;z-index:99999}
@@ -301,12 +329,15 @@
   </div>
 
   <div id="materials" class="card" style="display:none;">
-    <h2>Materials</h2>
+  <h2>Materials</h2>
+
+  <div class="materials-scroll">
     <table>
       <thead><tr><th>#</th><th>Name</th><th>Lot</th><th>Exp</th><th>Qty</th><th>Volume</th><th>Unit</th><th>Action</th></tr></thead>
       <tbody id="materialsTable"></tbody>
     </table>
   </div>
+</div>
 
   <div id="restock" class="card" style="display:none;">
     <h2>Restock Item</h2>
