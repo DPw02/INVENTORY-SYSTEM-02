@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Inventory Management System – INVENTORY02 (Final)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 
 .materials-scroll{
@@ -25,11 +27,19 @@
   padding:18px;
   text-align:center;
   cursor:pointer;
+  transition:transform .15s ease, box-shadow .15s ease;
 }
 
+.circle-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 10px 25px rgba(0,0,0,.35);
+}
+
+
 .circle{
-  width:140px;
-  height:140px;
+  width:clamp(110px, 30vw, 140px);
+  height:clamp(110px, 30vw, 140px);
+
   border-radius:50%;
   background:conic-gradient(var(--muted) 0deg,#0b2e40 0deg);
   display:flex;
@@ -41,7 +51,9 @@
 .circle span{
   font-size:26px;
   font-weight:600;
+  color:#ffffff; /* FIX invisible text */
 }
+
 
 
   :root{
@@ -87,16 +99,44 @@
 
   /* LAYOUT */
   #sidebar{width:230px; height:100vh; background:var(--panel); color:#0cf0ff; display:none; flex-direction:column; padding:20px 0; position:fixed; left:0; top:0; box-sizing:border-box}
-  #sidebar h2{margin:0 0 18px; text-align:center; font-weight:400}
-  .sidebar-btn{padding:14px 18px; background:none; border:none; color:#0cf0ff; font-size:15px; text-align:left; cursor:pointer; width:100%}
-  .sidebar-btn:hover, .sidebar-btn.active{background:#09243e}
+  
+#sidebar{
+  width:230px;
+  min-width:200px;
+  background:var(--panel);
+  color:#0cf0ff;
+  display:flex;
+  flex-direction:column;
+  padding:20px 0;
+  position:sticky;
+  top:0;
+  height:100vh;
+}
 
-  #main{margin-left:230px; height:100vh; overflow-y:auto; padding:28px; display:none}
+#main{
+  flex:1;
+  min-width:0;
+  height:100vh;
+  overflow-y:auto;
+  padding:28px;
+}
+
+
   .card{background:var(--card); padding:22px; border-radius:12px; box-shadow:0 6px 20px rgba(0,0,0,0.12); max-width:1100px; margin:auto}
   .dark .card{background:#131b28}
 
-  table{width:100%; border-collapse:collapse; margin-top:12px; color:var(--light)}
-  th,td{padding:10px; border-bottom:1px solid rgba(255,255,255,0.06); text-align:left; font-size:14px}
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:12px;
+  color:var(--light);
+  display:block;
+  overflow-x:auto;
+  white-space:nowrap;
+}
+
+
+    th,td{padding:10px; border-bottom:1px solid rgba(255,255,255,0.06); text-align:left; font-size:14px}
   th{opacity:0.9}
 
   .actionSmall{padding:8px 10px; border-radius:6px; background:rgba(255,255,255,0.05); color:var(--light); border:1px solid rgba(255,255,255,0.04); cursor:pointer}
@@ -150,22 +190,72 @@
   label{display:block; font-size:12px; color:#cfeef0; margin-top:8px}
   .hidden{display:none}
 
-  @media(max-width:900px){
-  #sidebar{display:none !important}
-  #main{margin-left:0; padding:16px}
-  .modalContent{
-    width:92%;
-    max-height:85vh;   /* ✅ ENSURE SCROLL ON MOBILE */
-    overflow-y:auto;
-  }
-}
-
+ 
   /* small status */
   #statusBar{position:fixed;right:12px;bottom:12px;background:rgba(0,0,0,0.45);color:#a7c5ff;padding:8px 12px;border-radius:8px;font-size:13px;z-index:99999}
 
   /* animation */
   .modalContent { transform-origin:center; animation:modalIn .14s ease-out; }
   @keyframes modalIn { from{opacity:0; transform:scale(0.98);} to{opacity:1; transform:scale(1);} }
+/* =========================
+   RESPONSIVE LAYOUT
+   ========================= */
+
+@media (max-width: 900px){
+  #appLayout{
+    flex-direction:column;
+  }
+
+  #sidebar{
+    position:relative;
+    width:100%;
+    height:auto;
+    flex-direction:row;
+    flex-wrap:wrap;
+    justify-content:center;
+    padding:10px;
+  }
+
+  #sidebar h2{
+    width:100%;
+    text-align:center;
+  }
+
+  .sidebar-btn{
+    flex:1 1 120px;
+    margin:4px;
+  }
+
+  #main{
+    height:auto;
+    padding:16px;
+  }
+}
+
+@media (max-width: 600px){
+  .centerBox{
+    width:90%;
+    padding:24px;
+  }
+
+  .dashboard-grid{
+    grid-template-columns:1fr;
+  }
+
+  table{
+    font-size:12px;
+  }
+
+  th, td{
+    padding:6px;
+  }
+
+  .modalContent{
+    width:92%;
+  }
+}
+
+
 </style>
 </head>
 <body>
@@ -174,9 +264,13 @@
 <div id="loginPage">
   <div class="centerBox">
     <h2>Login</h2>
-    <input id="loginUser" placeholder="Username" list="userList"><br><br>
+    <input id="loginUser" placeholder="Username" list="userList"
+  onkeydown="if(event.key==='Enter') document.getElementById('loginPass').focus();"
+><br><br>
     <datalist id="userList"></datalist>
-    <input id="loginPass" type="password" placeholder="Password"><br><br>
+    <input id="loginPass" type="password" placeholder="Password"
+  onkeydown="if(event.key==='Enter') login();"
+><br><br>
     <button class="action" onclick="login()">Login</button>
     <a class="link" id="createAccountLink" onclick="showCreate()">Create Account</a>
 
@@ -196,7 +290,9 @@
 </div>
 
 <!-- SIDEBAR -->
-<div id="sidebar">
+<div id="appLayout" style="display:flex; height:100vh; width:100%;">
+  <div id="sidebar">
+
 
   <div id="sidebarUser" style="
     text-align:center;
@@ -285,7 +381,7 @@
 <div id="dashboard" class="card" style="display:none;">
   <h2>Dashboard</h2>
 
-  <div class="dashboard-grid">
+<div class="dashboard-grid">
 
     <div class="circle-card" onclick="openDashPopup('low')">
       <h3>Low Stock</h3>
@@ -317,11 +413,36 @@
 
 
   </div>
+
+<h3 style="margin-top:18px;">📊 Usage Analytics</h3>
+<canvas id="usageChart" height="120" style="margin-bottom:20px;"></canvas>
+
+<table>
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Total Used</th>
+      <th>Last Used</th>
+    </tr>
+  </thead>
+  <tbody id="usageTable"></tbody>
+</table>
+
+
+  
 </div>
 
 
   <div id="inventory" class="card" style="display:none;">
     <h2>Inventory</h2>
+<input
+  type="text"
+  id="inventorySearch"
+  placeholder="Search inventory..."
+  oninput="filterInventory()"
+  style="margin-bottom:12px;width:100%;padding:8px;"
+>
+
     <table>
       <thead><tr><th>#</th><th>Name</th><th>Lot</th><th>Exp</th><th>Qty</th><th>Volume</th><th>Unit</th></tr></thead>
       <tbody id="inventoryTable"></tbody>
@@ -330,6 +451,14 @@
 
   <div id="materials" class="card" style="display:none;">
   <h2>Materials</h2>
+<input
+  type="text"
+  id="materialsSearch"
+  placeholder="Search materials..."
+  oninput="filterMaterials()"
+  style="margin-bottom:12px;width:100%;padding:8px;"
+>
+
 
   <div class="materials-scroll">
     <table>
@@ -651,6 +780,9 @@ const db = firebase.database();
 
 /* App state */
 let inventory = [], checkoutHistory = [], accounts = [], activity = [], loggedIn = null;
+let usageStats = {};
+let usageChart = null;
+
 let presence = {};
 
 let keys = {};
@@ -787,19 +919,29 @@ let loginPage, createPage, sidebarEl, main;
 let r_itemNum, r_name, r_lot, r_exp, r_qty, r_volume, r_unit;
 let c_search, c_dropdown, c_itemNum, c_name, c_lot, c_exp, c_qty, c_volume, c_unit;
 let editModalEl, editNum, editName, editLot, editExp, editQty,
-    editVolume, editUnit, editItemNum, editLowStock, editExpWarn;
+    editVolume, editUnit, editItemNum, editLowStock, editExpWarn, editInUse;
+
 
 let confirmModalEl, confirmMessage, successModalEl, successDetails;
 let s_newUser, s_newPass, loginUser, loginPass, newUser, newPass;
 const statusBar = document.getElementById('statusBar');
 
-/* ---------- Firebase realtime listeners ---------- */
-  db.ref('presence').on('value', snap=>{
-    presence = snap.val() || {};
-  });
+
+
 
 function setupFirebaseListeners(){
   statusBar.textContent = 'Connecting to Firebase…';
+
+/* ---------- Firebase realtime listeners ---------- */
+db.ref('presence').on('value', snap=>{
+  presence = snap.val() || {};
+});
+
+// ✅ ADD THIS BLOCK — USAGE ANALYTICS LISTENER
+db.ref('usageStats').on('value', snap=>{
+  usageStats = snap.val() || {};
+});
+
 
   db.ref('inventory').on('value', snap=>{
     const val = snap.val();
@@ -1039,6 +1181,66 @@ function updateDashboard(){
 
   document.getElementById("circle_users").style.background =
     `conic-gradient(#7ad7ff ${Math.min(totalUsers * 60, 360)}deg,#0b2e40 0deg)`;
+// 📈 Render usage chart
+const chartCanvas = document.getElementById("usageChart");
+if(chartCanvas){
+  const labels = [];
+  const data = [];
+
+  Object.entries(usageStats || {})
+    .sort((a,b)=> b[1].totalUsed - a[1].totalUsed)
+    .slice(0, 10)
+    .forEach(([num, item])=>{
+      labels.push(item.name);
+      data.push(item.totalUsed);
+    });
+
+  if(usageChart){
+    usageChart.data.labels = labels;
+    usageChart.data.datasets[0].data = data;
+    usageChart.update();
+  }else{
+    usageChart = new Chart(chartCanvas, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [{
+          label: "Total Used",
+          data,
+          backgroundColor: "#7ad7ff"
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+}
+
+
+// 📊 Render usage analytics table
+const usageBody = document.getElementById("usageTable");
+if(usageBody){
+  usageBody.innerHTML = "";
+
+  Object.entries(usageStats || {})
+    .sort((a,b)=> b[1].totalUsed - a[1].totalUsed)
+    .forEach(([num,data])=>{
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td>${data.name} (#${num})</td>
+        <td>${data.totalUsed}</td>
+        <td>${data.lastUsed ? new Date(data.lastUsed).toLocaleString() : "-"}</td>
+      `;
+
+      usageBody.appendChild(tr);
+    });
+}
+
 }
 
   
@@ -1192,6 +1394,21 @@ function checkoutItem(){
 
   item.qty = Number(item.qty) - qty;
 
+// 📊 USAGE ANALYTICS
+if(!usageStats[num]){
+  usageStats[num] = {
+    name: item.name,
+    totalUsed: 0,
+    lastUsed: 0
+  };
+}
+
+usageStats[num].totalUsed += qty;
+usageStats[num].lastUsed = Date.now();
+
+db.ref('usageStats').set(usageStats);
+
+
   checkoutHistory.push({
     date: new Date().toLocaleString(),
     num,
@@ -1228,9 +1445,12 @@ function setupOutsideClickClose(){
     if(e.target === successModalEl) closeSuccessModal();
   });
   // edit modal - click outside to close (acts like cancel)
-  editModalEl.addEventListener('mousedown', e=>{
-    if(e.target === editModalEl) closeEdit();
-  });
+ editModalEl.addEventListener('mousedown', e=>{
+  if(e.target === editModalEl){
+    closeEdit();
+  }
+});
+
   // confirm modal - click outside to close (acts like cancel)
   confirmModalEl.addEventListener('mousedown', e=>{
     if(e.target === confirmModalEl) closeConfirmModal();
@@ -1239,6 +1459,8 @@ function setupOutsideClickClose(){
 
 /* Edit item */
 let editTarget = null;
+let editDirty = false;
+
 function editItem(num){
   editTarget = (inventory || []).find(i=>String(i.num)===String(num));
   if(!editTarget) return alert('Item not found');
@@ -1256,6 +1478,8 @@ editExpWarn.value = editTarget.expWarn ?? 90;
 editInUse.checked = (editTarget.inUse !== false);  // default true if undefined
 
   editModalEl.style.display = 'flex';
+editDirty = false;
+
 }
 
 function saveEditClicked(){
@@ -1274,13 +1498,30 @@ function saveEditClicked(){
 editTarget.inUse = editInUse.checked;
 
   saveAll();
+editDirty = false;
+
   closeEdit();
 }
 
 
 
   
-function closeEdit(){ editModalEl.style.display = 'none'; editTarget = null; }
+function closeEdit(){
+  if(editDirty){
+    openConfirmModal(
+      "You have unsaved changes. Discard them?",
+      ()=>{
+        editDirty = false;
+        editModalEl.style.display = 'none';
+        editTarget = null;
+      }
+    );
+    return;
+  }
+
+  editModalEl.style.display = 'none';
+  editTarget = null;
+}
 
 /* Delete */
 function openConfirmModalForDelete(){ if(!editTarget) return; openConfirmModal(`Delete item ${escapeHtml(editTarget.num)} (${escapeHtml(editTarget.name)})? This cannot be undone.`, deleteItem); }
@@ -1426,6 +1667,14 @@ function ensureInitialData(){
 
   db.ref('checkoutHistory').once('value').then(snap=>{ if(!snap.exists()) db.ref('checkoutHistory').set([]); });
   db.ref('activity').once('value').then(snap=>{ if(!snap.exists()) db.ref('activity').set([]); });
+
+db.ref('usageStats').once('value').then(snap=>{
+  if(!snap.exists()){
+    db.ref('usageStats').set({});
+  }
+});
+
+
 }
 
 /* DOM ready: wire elements and start listeners */
@@ -1462,8 +1711,30 @@ document.addEventListener('DOMContentLoaded', ()=>{
   editQty = document.getElementById('editQty');
   editVolume = document.getElementById('editVolume');
   editUnit = document.getElementById('editUnit');
+function wireEditDirtyTracking(){
+  [
+    editNum,
+    editName,
+    editLot,
+    editExp,
+    editQty,
+    editVolume,
+    editUnit,
+    editLowStock,
+    editExpWarn,
+    editInUse
+  ].forEach(el=>{
+    if(el){
+      el.addEventListener("input", ()=> editDirty = true);
+      el.addEventListener("change", ()=> editDirty = true);
+    }
+  });
+}
+
 editLowStock = document.getElementById('editLowStock');
 editExpWarn = document.getElementById('editExpWarn');
+editInUse = document.getElementById('editInUse');
+
 
   editItemNum = document.getElementById('editItemNum');
 
@@ -1489,6 +1760,8 @@ newKey  = document.getElementById('newKey'); // ✅ REQUIRED
   setupFirebaseListeners();
   ensureInitialData();
   setupOutsideClickClose();
+wireEditDirtyTracking();
+
 });
 
 /* Expose functions for onclick handlers */
@@ -1524,6 +1797,32 @@ function closeDashPopup(){
 window.updateDashboard = updateDashboard;
 window.openDashPopup = openDashPopup;
 window.closeDashPopup = closeDashPopup;
+
+function filterMaterials(){
+  const q = document.getElementById("materialsSearch").value.toLowerCase();
+  const rows = document.querySelectorAll("#materialsTable tr");
+
+  rows.forEach(row=>{
+    row.style.display = row.innerText.toLowerCase().includes(q)
+      ? ""
+      : "none";
+  });
+}
+
+
+
+
+function filterInventory(){
+  const q = document.getElementById("inventorySearch").value.toLowerCase();
+  const rows = document.querySelectorAll("#inventoryTable tr");
+
+  rows.forEach(row=>{
+    row.style.display = row.innerText.toLowerCase().includes(q)
+      ? ""
+      : "none";
+  });
+}
+
 
 
 
