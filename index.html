@@ -100,6 +100,7 @@
   /* LAYOUT */
   #sidebar{width:230px; height:100vh; background:var(--panel); color:#0cf0ff; display:none; flex-direction:column; padding:20px 0; position:fixed; left:0; top:0; box-sizing:border-box}
   
+
 #sidebar{
   width:230px;
   min-width:200px;
@@ -109,9 +110,50 @@
   flex-direction:column;
   padding:20px 0;
   position:sticky;
+  left:0;
   top:0;
   height:100vh;
+  align-items:center;
 }
+
+
+/* SIDEBAR BUTTONS (RESTORED STYLE) */
+.sidebar-btn{
+  background:transparent;
+  color:var(--text);
+  border:none;
+  padding:16px 20px;
+  margin:8px auto;
+  border-radius:12px;
+  text-align:center;
+  font-size:16px;
+  cursor:pointer;
+  width:85%;
+  transition:background .15s ease, transform .12s ease;
+}
+
+
+.sidebar-btn:hover{
+  background:rgba(12,240,255,0.12);
+  transform:translateX(4px);
+}
+
+.sidebar-btn.active{
+  background:rgba(12,240,255,0.22);
+  font-weight:500;
+}
+
+
+.logout-btn{
+  margin-top:auto;
+  margin-bottom:16px;
+  background:rgba(255,255,255,0.05);
+}
+
+.logout-btn:hover{
+  background:rgba(255,80,80,0.18);
+}
+
 
 #main{
   flex:1;
@@ -201,36 +243,7 @@ table{
    RESPONSIVE LAYOUT
    ========================= */
 
-@media (max-width: 900px){
-  #appLayout{
-    flex-direction:column;
-  }
 
-  #sidebar{
-    position:relative;
-    width:100%;
-    height:auto;
-    flex-direction:row;
-    flex-wrap:wrap;
-    justify-content:center;
-    padding:10px;
-  }
-
-  #sidebar h2{
-    width:100%;
-    text-align:center;
-  }
-
-  .sidebar-btn{
-    flex:1 1 120px;
-    margin:4px;
-  }
-
-  #main{
-    height:auto;
-    padding:16px;
-  }
-}
 
 @media (max-width: 600px){
   .centerBox{
@@ -253,6 +266,48 @@ table{
   .modalContent{
     width:92%;
   }
+}
+
+/* =====================
+   MOBILE RESPONSIVE LAYOUT
+   ===================== */
+
+@media (max-width: 900px){
+
+  #appLayout{
+    flex-direction:column;
+  }
+
+  #sidebar{
+    position:fixed;
+    left:0;
+    top:0;
+    height:100vh;
+    width:220px;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    z-index:100000;
+  }
+
+  #sidebar.open{
+    transform:translateX(0);
+  }
+
+  #main{
+    padding:16px;
+  }
+
+  #mobileMenuBtn{
+    display:block;
+  }
+
+  .sidebar-btn{
+  font-size:16px;
+  padding:16px 18px;
+  margin:10px 14px;
+  text-align:left;
+}
+
 }
 
 
@@ -290,7 +345,30 @@ table{
 </div>
 
 <!-- SIDEBAR -->
+
+<button id="mobileMenuBtn"
+  onclick="toggleSidebar()"
+  style="
+    display:none;
+    position:fixed;
+    top:12px;
+    left:12px;
+    z-index:100001;
+    background:var(--accent);
+    color:white;
+    border:none;
+    padding:10px 14px;
+    border-radius:10px;
+    font-size:18px;
+  ">
+  ☰
+</button>
+
+
 <div id="appLayout" style="display:flex; height:100vh; width:100%;">
+
+
+
   <div id="sidebar">
 
 
@@ -300,15 +378,24 @@ table{
     padding-bottom:12px;
     border-bottom:1px solid rgba(255,255,255,0.08);
   ">
-    <div id="sidebarUsername" style="font-size:16px;font-weight:500;">
+    <div id="sidebarUsername" style="font-size:16px;font-weight:500;text-align:center;">
+
       —
     </div>
-    <div id="sidebarRole" style="font-size:12px;opacity:.75;">
-      —
-    </div>
+   <div id="sidebarRole" style="font-size:12px;opacity:.75;text-align:center;">
+
+  —
+</div>
+
+<button class="sidebar-btn logout-btn" onclick="logout()">
+  Logout
+</button>
+
+
   </div>
 
-  <h2>Menu</h2>
+  <h2 style="text-align:center; margin-bottom:12px;">Menu</h2>
+
 
 
   <button class="sidebar-btn" onclick="showPage('dashboard')" id="sb_dashboard">
@@ -780,10 +867,13 @@ const db = firebase.database();
 
 /* App state */
 let inventory = [], checkoutHistory = [], accounts = [], activity = [], loggedIn = null;
+const savedUser = localStorage.getItem("loggedInUser");
+
 let usageStats = {};
 let usageChart = null;
 
 let presence = {};
+
 
 let keys = {};
 let appSettings = { disableCreateAccount: false };
@@ -974,10 +1064,29 @@ db.ref('settings').on('value', snap=>{
   });
 
   db.ref('accounts').on('value', snap=>{
-    const val = snap.val();
-    accounts = val ? (Array.isArray(val) ? val : Object.values(val)) : [];
-    updateUsernameSuggestions();
-  });
+  const val = snap.val();
+  accounts = val ? (Array.isArray(val) ? val : Object.values(val)) : [];
+  updateUsernameSuggestions();
+
+  if(savedUser && !loggedIn){
+    const acc = accounts.find(a=>a.u === savedUser);
+    if(acc){
+      loggedIn = savedUser;
+      setupPresence(savedUser);
+
+      document.getElementById("sidebarUsername").textContent = savedUser;
+      document.getElementById("sidebarRole").textContent = `(${acc.role || "user"})`;
+
+      sidebarEl.style.display = 'flex';
+      main.style.display = 'block';
+      loginPage.style.display = 'none';
+
+      showPage(localStorage.getItem("lastPage") || "dashboard");
+      updateAdminUI();
+    }
+  }
+});
+
 
   db.ref('activity').on('value', snap=>{
     const val = snap.val();
@@ -1084,6 +1193,8 @@ function login(){
   if(!a) return alert('Invalid login');
 
   loggedIn = u;
+localStorage.setItem("loggedInUser", u);
+
 
   // 🔴 START presence tracking
   setupPresence(u);
@@ -1099,7 +1210,8 @@ function login(){
   main.style.display = 'block';
   loginPage.style.display = 'none';
 
-  showPage('dashboard');
+  const lastPage = localStorage.getItem("lastPage") || "dashboard";
+showPage(lastPage);
   updateAll();
   updateAdminUI();
 }
@@ -1131,6 +1243,9 @@ if(p === "admin" && !isAdmin()){
   });
 
   const activePage = document.getElementById(p);
+// 💾 Remember last page
+localStorage.setItem("lastPage", p);
+
   if(activePage) activePage.style.display = "block";
 
   document.querySelectorAll(".sidebar-btn").forEach(btn=>{
@@ -1144,6 +1259,10 @@ if(p === "admin" && !isAdmin()){
     updateDashboard();
   }
 
+// 📱 MOBILE: auto-close sidebar after navigation
+if(window.innerWidth <= 900){
+  sidebarEl.classList.remove("open");
+}
 
 
 
@@ -1678,7 +1797,12 @@ db.ref('usageStats').once('value').then(snap=>{
 }
 
 /* DOM ready: wire elements and start listeners */
-document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener("DOMContentLoaded", ()=>{
+
+
+
+
+
   // UI refs
   loginPage = document.getElementById('loginPage');
   createPage = document.getElementById('createPage');
@@ -1764,6 +1888,11 @@ wireEditDirtyTracking();
 
 });
 
+function toggleSidebar(){
+  sidebarEl.classList.toggle("open");
+}
+
+
 /* Expose functions for onclick handlers */
 
 window.generateKey = generateKey;
@@ -1797,6 +1926,21 @@ function closeDashPopup(){
 window.updateDashboard = updateDashboard;
 window.openDashPopup = openDashPopup;
 window.closeDashPopup = closeDashPopup;
+
+
+function logout(){
+  localStorage.removeItem("loggedInUser");
+  loggedIn = null;
+
+  loginUser.value = "";
+  loginPass.value = "";
+
+  sidebarEl.classList.remove("open");
+  sidebarEl.style.display = 'none';
+  main.style.display = 'none';
+  loginPage.style.display = 'flex';
+}
+
 
 function filterMaterials(){
   const q = document.getElementById("materialsSearch").value.toLowerCase();
